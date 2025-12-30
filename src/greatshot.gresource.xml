@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/io/github/syed/greatshot">
+    <file preprocess="xml-stripblanks">window.ui</file>
+    <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/camera-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/arrow-back-up-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/arrow-forward-up-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/copy-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/palette-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/folder-open-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/clipboard-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/device-floppy-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/settings-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/clock-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pointer-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/zoom-in-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/select-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/crop-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pencil-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/square-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/minus-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/arrow-right-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/text-size-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/blur-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/cursor-text-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/photo-symbolic.svg</file>
+  </gresource>
+</gresources>

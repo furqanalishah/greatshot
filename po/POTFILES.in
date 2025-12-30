@@ -1,0 +1,6 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+data/io.github.syed.greatshot.desktop.in
+data/io.github.syed.greatshot.metainfo.xml.in
+data/io.github.syed.greatshot.gschema.xml
+src/window.ui

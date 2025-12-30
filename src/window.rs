@@ -1,69 +1,77 @@
+/* window.rs
+ *
+ * Copyright 2025 Furqan Ali Shah
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 use std::cell::{Cell, RefCell};
-use std::io::Cursor;
 use std::rc::Rc;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::Duration;
 
 use adw::prelude::*;
+use adw::subclass::prelude::*;
 use ashpd::desktop::screenshot::Screenshot;
-use gtk::gdk;
-use gtk::gio;
-use gtk::glib;
+use gtk::{gdk, gio, glib};
 use gdk_pixbuf::Pixbuf;
 
 use crate::editor::{self, Annotation, EditorState, Point, Rect, Tool};
 
-const ICON_CAPTURE: &[u8] = include_bytes!("../assets/icons/camera.svg");
-const ICON_UNDO: &[u8] = include_bytes!("../assets/icons/arrow-back-up.svg");
-const ICON_REDO: &[u8] = include_bytes!("../assets/icons/arrow-forward-up.svg");
-const ICON_COPY: &[u8] = include_bytes!("../assets/icons/copy.svg");
-const ICON_PALETTE: &[u8] = include_bytes!("../assets/icons/palette.svg");
-const ICON_OPEN: &[u8] = include_bytes!("../assets/icons/folder-open.svg");
-const ICON_PASTE: &[u8] = include_bytes!("../assets/icons/clipboard.svg");
-const ICON_SAVE: &[u8] = include_bytes!("../assets/icons/device-floppy.svg");
-const ICON_SETTINGS: &[u8] = include_bytes!("../assets/icons/settings.svg");
-const ICON_CLOCK: &[u8] = include_bytes!("../assets/icons/clock.svg");
-const ICON_POINTER: &[u8] = include_bytes!("../assets/icons/pointer.svg");
-const ICON_ZOOM: &[u8] = include_bytes!("../assets/icons/zoom-in.svg");
-const ICON_SELECT: &[u8] = include_bytes!("../assets/icons/select.svg");
-const ICON_CROP: &[u8] = include_bytes!("../assets/icons/crop.svg");
-const ICON_PEN: &[u8] = include_bytes!("../assets/icons/pencil.svg");
-const ICON_RECT: &[u8] = include_bytes!("../assets/icons/square.svg");
-const ICON_LINE: &[u8] = include_bytes!("../assets/icons/minus.svg");
-const ICON_ARROW: &[u8] = include_bytes!("../assets/icons/arrow-right.svg");
-const ICON_TEXT: &[u8] = include_bytes!("../assets/icons/text-size.svg");
-const ICON_BLUR: &[u8] = include_bytes!("../assets/icons/blur.svg");
+mod imp {
+    use super::*;
 
-fn set_image_from_svg(image: &gtk::Image, icon: &[u8], color: &str) {
-    let svg = String::from_utf8_lossy(icon).replace("#e6e6e6", color);
-    let pixbuf = Pixbuf::from_read(Cursor::new(svg.to_owned().into_bytes()))
-        .ok()
-        .and_then(|pixbuf| pixbuf.scale_simple(20, 20, gdk_pixbuf::InterpType::Bilinear));
-    let paintable = pixbuf.map(|pixbuf| gdk::Texture::for_pixbuf(&pixbuf));
-    image.set_paintable(paintable.as_ref());
+    #[derive(Debug, Default)]
+    pub struct GreatshotWindow {}
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for GreatshotWindow {
+        const NAME: &'static str = "GreatshotWindow";
+        type Type = super::GreatshotWindow;
+        type ParentType = adw::ApplicationWindow;
+    }
+
+    impl ObjectImpl for GreatshotWindow {}
+    impl WidgetImpl for GreatshotWindow {}
+    impl WindowImpl for GreatshotWindow {}
+    impl ApplicationWindowImpl for GreatshotWindow {}
+    impl AdwApplicationWindowImpl for GreatshotWindow {}
 }
 
-fn create_icon(
-    icon: &'static [u8],
-    icon_images: &Rc<RefCell<Vec<(gtk::Image, &'static [u8])>>>,
-    icon_color: &Rc<RefCell<String>>,
-) -> gtk::Image {
-    let image = gtk::Image::new();
-    let color = {
-        let color = icon_color.borrow();
-        if color.is_empty() {
-            "#e6e6e6".to_string()
-        } else {
-            color.to_string()
-        }
-    };
-    set_image_from_svg(&image, icon, &color);
-    icon_images.borrow_mut().push((image.clone(), icon));
-    image
+glib::wrapper! {
+    pub struct GreatshotWindow(ObjectSubclass<imp::GreatshotWindow>)
+        @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow;
 }
 
-pub fn build_ui(app: &adw::Application) {
+impl GreatshotWindow {
+    pub fn new<P: IsA<adw::Application>>(app: &P) -> Self {
+        let window: Self = glib::Object::builder()
+            .property("application", app)
+            .property("default-width", 1400)
+            .property("default-height", 900)
+            .property("title", "GreatShot")
+            .build();
+
+        build_ui_for_window(&window);
+        window
+    }
+}
+
+fn build_ui_for_window(window: &GreatshotWindow) {
     let runtime = Arc::new(
         tokio::runtime::Runtime::new().expect("Failed to start async runtime"),
     );
@@ -76,10 +84,6 @@ pub fn build_ui(app: &adw::Application) {
         state.zoom = 1.0;
     }
 
-    let icon_images: Rc<RefCell<Vec<(gtk::Image, &'static [u8])>>> =
-        Rc::new(RefCell::new(Vec::new()));
-    let icon_color = Rc::new(RefCell::new(String::new()));
-
     if let Some(display) = gdk::Display::default() {
         let css = gtk::CssProvider::new();
         gtk::style_context_add_provider_for_display(
@@ -89,8 +93,6 @@ pub fn build_ui(app: &adw::Application) {
         );
         let style_manager = adw::StyleManager::default();
         let css_provider = css.clone();
-        let icon_images_for_theme = icon_images.clone();
-        let icon_color_for_theme = icon_color.clone();
         let apply_theme_css = move |is_dark: bool| {
             if is_dark {
                 css_provider.load_from_string(
@@ -135,11 +137,6 @@ pub fn build_ui(app: &adw::Application) {
                      .editor-status { color: #5c5c5c; font-size: 11px; }",
                 );
             }
-            let icon_color_value = if is_dark { "#e6e6e6" } else { "#2b2b2b" };
-            *icon_color_for_theme.borrow_mut() = icon_color_value.to_string();
-            for (image, icon) in icon_images_for_theme.borrow().iter() {
-                set_image_from_svg(image, icon, icon_color_value);
-            }
         };
         let initial_dark = style_manager.is_dark();
         apply_theme_css(initial_dark);
@@ -154,17 +151,17 @@ pub fn build_ui(app: &adw::Application) {
         .build();
 
     let capture_button = gtk::Button::builder()
-        .child(&create_icon(ICON_CAPTURE, &icon_images, &icon_color))
+        .icon_name("camera-symbolic")
         .tooltip_text("Capture screenshot")
         .build();
     header.pack_start(&capture_button);
 
     let open_button = gtk::Button::builder()
-        .child(&create_icon(ICON_OPEN, &icon_images, &icon_color))
+        .icon_name("folder-open-symbolic")
         .tooltip_text("Open image")
         .build();
     let paste_button = gtk::Button::builder()
-        .child(&create_icon(ICON_PASTE, &icon_images, &icon_color))
+        .icon_name("clipboard-symbolic")
         .tooltip_text("Paste from clipboard")
         .build();
     header.pack_start(&open_button);
@@ -183,7 +180,7 @@ pub fn build_ui(app: &adw::Application) {
         .active(true)
         .build();
     let settings_button = gtk::MenuButton::builder()
-        .child(&create_icon(ICON_SETTINGS, &icon_images, &icon_color))
+        .icon_name("settings-symbolic")
         .tooltip_text("Capture settings")
         .build();
     let settings_box = gtk::Box::builder()
@@ -224,7 +221,7 @@ pub fn build_ui(app: &adw::Application) {
     size_label.set_hexpand(true);
     size_row.append(&size_label);
     size_row.append(&size_spin);
-    let size_icon = create_icon(ICON_PEN, &icon_images, &icon_color);
+    let size_icon = gtk::Image::from_icon_name("pencil-symbolic");
     let size_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -240,7 +237,7 @@ pub fn build_ui(app: &adw::Application) {
     delay_label.set_hexpand(true);
     delay_row.append(&delay_label);
     delay_row.append(&delay_spin);
-    let delay_icon = create_icon(ICON_CLOCK, &icon_images, &icon_color);
+    let delay_icon = gtk::Image::from_icon_name("clock-symbolic");
     let delay_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -256,7 +253,7 @@ pub fn build_ui(app: &adw::Application) {
     interactive_label.set_hexpand(true);
     interactive_row.append(&interactive_label);
     interactive_row.append(&interactive_toggle);
-    let interactive_icon = create_icon(ICON_POINTER, &icon_images, &icon_color);
+    let interactive_icon = gtk::Image::from_icon_name("pointer-symbolic");
     let interactive_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -272,7 +269,7 @@ pub fn build_ui(app: &adw::Application) {
     zoom_label.set_hexpand(true);
     zoom_row.append(&zoom_label);
     zoom_row.append(&zoom_scale);
-    let zoom_icon = create_icon(ICON_ZOOM, &icon_images, &icon_color);
+    let zoom_icon = gtk::Image::from_icon_name("zoom-in-symbolic");
     let zoom_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -303,19 +300,19 @@ pub fn build_ui(app: &adw::Application) {
     header.pack_end(&settings_button);
 
     let undo_button = gtk::Button::builder()
-        .child(&create_icon(ICON_UNDO, &icon_images, &icon_color))
+        .icon_name("arrow-back-up-symbolic")
         .tooltip_text("Undo")
         .build();
     let redo_button = gtk::Button::builder()
-        .child(&create_icon(ICON_REDO, &icon_images, &icon_color))
+        .icon_name("arrow-forward-up-symbolic")
         .tooltip_text("Redo")
         .build();
     let copy_button = gtk::Button::builder()
-        .child(&create_icon(ICON_COPY, &icon_images, &icon_color))
+        .icon_name("copy-symbolic")
         .tooltip_text("Copy to clipboard")
         .build();
     let save_button = gtk::Button::builder()
-        .child(&create_icon(ICON_SAVE, &icon_images, &icon_color))
+        .icon_name("device-floppy-symbolic")
         .tooltip_text("Save as PNG")
         .build();
     header.pack_end(&copy_button);
@@ -387,28 +384,29 @@ pub fn build_ui(app: &adw::Application) {
 
     let color_dialog = Rc::new(gtk::ColorDialog::new());
     let color_button = gtk::Button::builder()
-        .child(&create_icon(ICON_PALETTE, &icon_images, &icon_color))
+        .icon_name("palette-symbolic")
         .tooltip_text("Custom color")
         .build();
     color_button.add_css_class("color-custom");
 
-    let make_tool_button = |icon: &'static [u8], tooltip: &str| {
-        let image = create_icon(icon, &icon_images, &icon_color);
-        let button = gtk::ToggleButton::builder().child(&image).build();
+    let make_tool_button = |icon_name: &str, tooltip: &str| {
+        let button = gtk::ToggleButton::builder()
+            .icon_name(icon_name)
+            .build();
         button.add_css_class("tool-button");
         button.set_tooltip_text(Some(tooltip));
         button
     };
 
     let tool_buttons: Vec<(Tool, gtk::ToggleButton)> = vec![
-        (Tool::Select, make_tool_button(ICON_SELECT, "Select")),
-        (Tool::Crop, make_tool_button(ICON_CROP, "Crop")),
-        (Tool::Pen, make_tool_button(ICON_PEN, "Pen")),
-        (Tool::Rect, make_tool_button(ICON_RECT, "Rectangle")),
-        (Tool::Line, make_tool_button(ICON_LINE, "Line")),
-        (Tool::Arrow, make_tool_button(ICON_ARROW, "Arrow")),
-        (Tool::Text, make_tool_button(ICON_TEXT, "Text")),
-        (Tool::Blur, make_tool_button(ICON_BLUR, "Blur")),
+        (Tool::Select, make_tool_button("select-symbolic", "Select")),
+        (Tool::Crop, make_tool_button("crop-symbolic", "Crop")),
+        (Tool::Pen, make_tool_button("pencil-symbolic", "Pen")),
+        (Tool::Rect, make_tool_button("square-symbolic", "Rectangle")),
+        (Tool::Line, make_tool_button("minus-symbolic", "Line")),
+        (Tool::Arrow, make_tool_button("arrow-right-symbolic", "Arrow")),
+        (Tool::Text, make_tool_button("text-size-symbolic", "Text")),
+        (Tool::Blur, make_tool_button("blur-symbolic", "Blur")),
     ];
 
     for (_, button) in tool_buttons.iter() {
@@ -421,16 +419,8 @@ pub fn build_ui(app: &adw::Application) {
     let toolbar_view = adw::ToolbarView::builder().content(&overlay).build();
     toolbar_view.add_top_bar(&header);
 
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .default_width(1400)
-        .default_height(900)
-        .title("GreatShot")
-        .content(&toolbar_view)
-        .build();
-
+    window.set_content(Some(&toolbar_view));
     window.maximize();
-    window.present();
 
     let zoom_updating = Rc::new(Cell::new(false));
     let fit_updating = Rc::new(Cell::new(false));
@@ -442,7 +432,7 @@ pub fn build_ui(app: &adw::Application) {
         let fit_toggle = fit_toggle.clone();
         let zoom_updating = zoom_updating.clone();
         let fit_updating = fit_updating.clone();
-        Rc::new(move |pixbuf: gdk_pixbuf::Pixbuf| {
+        Rc::new(move |pixbuf: Pixbuf| {
             let width = pixbuf.width();
             let height = pixbuf.height();
             drawing_area.set_content_width(width);
@@ -479,7 +469,7 @@ pub fn build_ui(app: &adw::Application) {
                     set_status_for_timer(&msg);
                     let file = gio::File::for_uri(&uri);
                     match file.path() {
-                        Some(path) => match gdk_pixbuf::Pixbuf::from_file(path) {
+                        Some(path) => match Pixbuf::from_file(path) {
                             Ok(pixbuf) => {
                                 apply_background_for_timer(pixbuf);
                             }
@@ -953,7 +943,7 @@ pub fn build_ui(app: &adw::Application) {
             file_dialog.open(Some(&window), None::<&gio::Cancellable>, move |res| {
                 match res {
                     Ok(file) => match file.path() {
-                        Some(path) => match gdk_pixbuf::Pixbuf::from_file(path) {
+                        Some(path) => match Pixbuf::from_file(path) {
                             Ok(pixbuf) => {
                                 apply_background(pixbuf);
                                 set_status("Opened image.");
