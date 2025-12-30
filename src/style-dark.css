@@ -1,0 +1,40 @@
+.tool-palette {
+    background: rgba(18, 18, 18, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.tool-button.toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tool-button.toggle:checked {
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+.color-palette {
+    background: rgba(18, 18, 18, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.color-swatch {
+    border: 2px solid rgba(255, 255, 255, 0.18);
+}
+
+.color-swatch.toggle:checked {
+    border: 2px solid rgba(255, 255, 255, 0.9);
+}
+
+.color-custom {
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.editor-canvas {
+    background: #1e1e1e;
+}
+
+.editor-status {
+    color: #c9c9c9;
+}

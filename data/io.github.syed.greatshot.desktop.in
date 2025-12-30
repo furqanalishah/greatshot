@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=GreatShot
+Exec=greatshot
+Icon=io.github.syed.greatshot
+Terminal=false
+Type=Application
+Categories=Graphics;Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true
