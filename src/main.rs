@@ -24,7 +24,6 @@ mod editor;
 mod window;
 
 use self::application::GreatshotApplication;
-use self::window::GreatshotWindow;
 
 use config::{GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR};
 use gettextrs::{bind_textdomain_codeset, bindtextdomain, textdomain};

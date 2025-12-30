@@ -84,68 +84,6 @@ fn build_ui_for_window(window: &GreatshotWindow) {
         state.zoom = 1.0;
     }
 
-    if let Some(display) = gdk::Display::default() {
-        let css = gtk::CssProvider::new();
-        gtk::style_context_add_provider_for_display(
-            &display,
-            &css,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
-        let style_manager = adw::StyleManager::default();
-        let css_provider = css.clone();
-        let apply_theme_css = move |is_dark: bool| {
-            if is_dark {
-                css_provider.load_from_string(
-                    ".tool-palette { background: rgba(18, 18, 18, 0.78); border-radius: 16px; padding: 10px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 12px 30px rgba(0,0,0,0.35); }
-                     .tool-button { min-width: 38px; min-height: 38px; border-radius: 10px; }
-                     .tool-button.toggle:hover { background: rgba(255, 255, 255, 0.08); }
-                     .tool-button.toggle:checked { background: rgba(255, 255, 255, 0.18); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55); }
-                     .color-palette { background: rgba(18, 18, 18, 0.72); border-radius: 12px; padding: 8px; border: 1px solid rgba(255,255,255,0.06); }
-                     .color-swatch { min-width: 20px; min-height: 20px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.18); }
-                     .color-swatch.toggle:checked { border: 2px solid rgba(255,255,255,0.9); }
-                     .color-custom { min-width: 20px; min-height: 20px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); }
-                     .color-black { background: #1b1b1b; }
-                     .color-white { background: #f5f5f5; }
-                     .color-red { background: #ff4d4d; }
-                     .color-orange { background: #ff9f1a; }
-                     .color-yellow { background: #ffd93d; }
-                     .color-green { background: #3ddc84; }
-                     .color-blue { background: #3b82f6; }
-                     .color-purple { background: #8b5cf6; }
-                     .editor-canvas { background: #1e1e1e; }
-                     .editor-status { color: #c9c9c9; font-size: 11px; }",
-                );
-            } else {
-                css_provider.load_from_string(
-                    ".tool-palette { background: rgba(250, 250, 250, 0.92); border-radius: 16px; padding: 10px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
-                     .tool-button { min-width: 38px; min-height: 38px; border-radius: 10px; }
-                     .tool-button.toggle:hover { background: rgba(0, 0, 0, 0.06); }
-                     .tool-button.toggle:checked { background: rgba(0, 0, 0, 0.08); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35); }
-                     .color-palette { background: rgba(250, 250, 250, 0.92); border-radius: 12px; padding: 8px; border: 1px solid rgba(0,0,0,0.08); }
-                     .color-swatch { min-width: 20px; min-height: 20px; border-radius: 999px; border: 2px solid rgba(0,0,0,0.2); }
-                     .color-swatch.toggle:checked { border: 2px solid rgba(0,0,0,0.8); }
-                     .color-custom { min-width: 20px; min-height: 20px; border-radius: 999px; border: 2px solid rgba(0,0,0,0.25); background: rgba(0,0,0,0.04); }
-                     .color-black { background: #1b1b1b; }
-                     .color-white { background: #f5f5f5; }
-                     .color-red { background: #ff4d4d; }
-                     .color-orange { background: #ff9f1a; }
-                     .color-yellow { background: #ffd93d; }
-                     .color-green { background: #3ddc84; }
-                     .color-blue { background: #3b82f6; }
-                     .color-purple { background: #8b5cf6; }
-                     .editor-canvas { background: #f4f4f4; }
-                     .editor-status { color: #5c5c5c; font-size: 11px; }",
-                );
-            }
-        };
-        let initial_dark = style_manager.is_dark();
-        apply_theme_css(initial_dark);
-        let style_manager_for_notify = style_manager.clone();
-        style_manager.connect_dark_notify(move |_| {
-            apply_theme_css(style_manager_for_notify.is_dark());
-        });
-    }
-
     let header = adw::HeaderBar::builder()
         .title_widget(&adw::WindowTitle::new("GreatShot", ""))
         .build();
@@ -399,7 +337,7 @@ fn build_ui_for_window(window: &GreatshotWindow) {
     };
 
     let tool_buttons: Vec<(Tool, gtk::ToggleButton)> = vec![
-        (Tool::Select, make_tool_button("select-symbolic", "Select")),
+        (Tool::Select, make_tool_button("pointer-symbolic", "Select")),
         (Tool::Crop, make_tool_button("crop-symbolic", "Crop")),
         (Tool::Pen, make_tool_button("pencil-symbolic", "Pen")),
         (Tool::Rect, make_tool_button("square-symbolic", "Rectangle")),
