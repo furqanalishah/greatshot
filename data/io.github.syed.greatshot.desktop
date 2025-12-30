@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=GreatShot
+Comment=Wayland-first screenshot + annotation tool
+Exec=greatshot
+Icon=io.github.syed.greatshot
+Terminal=false
+Categories=Graphics;Utility;
+
