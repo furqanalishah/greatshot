@@ -35,13 +35,32 @@ const ICON_ARROW: &[u8] = include_bytes!("../assets/icons/arrow-right.svg");
 const ICON_TEXT: &[u8] = include_bytes!("../assets/icons/text-size.svg");
 const ICON_BLUR: &[u8] = include_bytes!("../assets/icons/blur.svg");
 
-fn image_from_svg(icon: &[u8]) -> gtk::Image {
-    let pixbuf = Pixbuf::from_read(Cursor::new(icon.to_vec()))
+fn set_image_from_svg(image: &gtk::Image, icon: &[u8], color: &str) {
+    let svg = String::from_utf8_lossy(icon).replace("#e6e6e6", color);
+    let pixbuf = Pixbuf::from_read(Cursor::new(svg.to_owned().into_bytes()))
         .ok()
         .and_then(|pixbuf| pixbuf.scale_simple(20, 20, gdk_pixbuf::InterpType::Bilinear));
-    pixbuf
-        .map(|pixbuf| gtk::Image::from_paintable(Some(&gdk::Texture::for_pixbuf(&pixbuf))))
-        .unwrap_or_else(gtk::Image::new)
+    let paintable = pixbuf.map(|pixbuf| gdk::Texture::for_pixbuf(&pixbuf));
+    image.set_paintable(paintable.as_ref());
+}
+
+fn create_icon(
+    icon: &'static [u8],
+    icon_images: &Rc<RefCell<Vec<(gtk::Image, &'static [u8])>>>,
+    icon_color: &Rc<RefCell<String>>,
+) -> gtk::Image {
+    let image = gtk::Image::new();
+    let color = {
+        let color = icon_color.borrow();
+        if color.is_empty() {
+            "#e6e6e6".to_string()
+        } else {
+            color.to_string()
+        }
+    };
+    set_image_from_svg(&image, icon, &color);
+    icon_images.borrow_mut().push((image.clone(), icon));
+    image
 }
 
 pub fn build_ui(app: &adw::Application) {
@@ -57,6 +76,10 @@ pub fn build_ui(app: &adw::Application) {
         state.zoom = 1.0;
     }
 
+    let icon_images: Rc<RefCell<Vec<(gtk::Image, &'static [u8])>>> =
+        Rc::new(RefCell::new(Vec::new()));
+    let icon_color = Rc::new(RefCell::new(String::new()));
+
     if let Some(display) = gdk::Display::default() {
         let css = gtk::CssProvider::new();
         gtk::style_context_add_provider_for_display(
@@ -66,9 +89,10 @@ pub fn build_ui(app: &adw::Application) {
         );
         let style_manager = adw::StyleManager::default();
         let css_provider = css.clone();
-        let style_manager_for_css = style_manager.clone();
-        let apply_theme_css = move || {
-            if style_manager_for_css.is_dark() {
+        let icon_images_for_theme = icon_images.clone();
+        let icon_color_for_theme = icon_color.clone();
+        let apply_theme_css = move |is_dark: bool| {
+            if is_dark {
                 css_provider.load_from_string(
                     ".tool-palette { background: rgba(18, 18, 18, 0.78); border-radius: 16px; padding: 10px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 12px 30px rgba(0,0,0,0.35); }
                      .tool-button { min-width: 38px; min-height: 38px; border-radius: 10px; }
@@ -111,10 +135,17 @@ pub fn build_ui(app: &adw::Application) {
                      .editor-status { color: #5c5c5c; font-size: 11px; }",
                 );
             }
+            let icon_color_value = if is_dark { "#e6e6e6" } else { "#2b2b2b" };
+            *icon_color_for_theme.borrow_mut() = icon_color_value.to_string();
+            for (image, icon) in icon_images_for_theme.borrow().iter() {
+                set_image_from_svg(image, icon, icon_color_value);
+            }
         };
-        apply_theme_css();
+        let initial_dark = style_manager.is_dark();
+        apply_theme_css(initial_dark);
+        let style_manager_for_notify = style_manager.clone();
         style_manager.connect_dark_notify(move |_| {
-            apply_theme_css();
+            apply_theme_css(style_manager_for_notify.is_dark());
         });
     }
 
@@ -123,17 +154,17 @@ pub fn build_ui(app: &adw::Application) {
         .build();
 
     let capture_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_CAPTURE))
+        .child(&create_icon(ICON_CAPTURE, &icon_images, &icon_color))
         .tooltip_text("Capture screenshot")
         .build();
     header.pack_start(&capture_button);
 
     let open_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_OPEN))
+        .child(&create_icon(ICON_OPEN, &icon_images, &icon_color))
         .tooltip_text("Open image")
         .build();
     let paste_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_PASTE))
+        .child(&create_icon(ICON_PASTE, &icon_images, &icon_color))
         .tooltip_text("Paste from clipboard")
         .build();
     header.pack_start(&open_button);
@@ -152,7 +183,7 @@ pub fn build_ui(app: &adw::Application) {
         .active(true)
         .build();
     let settings_button = gtk::MenuButton::builder()
-        .child(&image_from_svg(ICON_SETTINGS))
+        .child(&create_icon(ICON_SETTINGS, &icon_images, &icon_color))
         .tooltip_text("Capture settings")
         .build();
     let settings_box = gtk::Box::builder()
@@ -193,7 +224,7 @@ pub fn build_ui(app: &adw::Application) {
     size_label.set_hexpand(true);
     size_row.append(&size_label);
     size_row.append(&size_spin);
-    let size_icon = image_from_svg(ICON_PEN);
+    let size_icon = create_icon(ICON_PEN, &icon_images, &icon_color);
     let size_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -209,7 +240,7 @@ pub fn build_ui(app: &adw::Application) {
     delay_label.set_hexpand(true);
     delay_row.append(&delay_label);
     delay_row.append(&delay_spin);
-    let delay_icon = image_from_svg(ICON_CLOCK);
+    let delay_icon = create_icon(ICON_CLOCK, &icon_images, &icon_color);
     let delay_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -225,7 +256,7 @@ pub fn build_ui(app: &adw::Application) {
     interactive_label.set_hexpand(true);
     interactive_row.append(&interactive_label);
     interactive_row.append(&interactive_toggle);
-    let interactive_icon = image_from_svg(ICON_POINTER);
+    let interactive_icon = create_icon(ICON_POINTER, &icon_images, &icon_color);
     let interactive_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -241,7 +272,7 @@ pub fn build_ui(app: &adw::Application) {
     zoom_label.set_hexpand(true);
     zoom_row.append(&zoom_label);
     zoom_row.append(&zoom_scale);
-    let zoom_icon = image_from_svg(ICON_ZOOM);
+    let zoom_icon = create_icon(ICON_ZOOM, &icon_images, &icon_color);
     let zoom_group = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
@@ -272,19 +303,19 @@ pub fn build_ui(app: &adw::Application) {
     header.pack_end(&settings_button);
 
     let undo_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_UNDO))
+        .child(&create_icon(ICON_UNDO, &icon_images, &icon_color))
         .tooltip_text("Undo")
         .build();
     let redo_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_REDO))
+        .child(&create_icon(ICON_REDO, &icon_images, &icon_color))
         .tooltip_text("Redo")
         .build();
     let copy_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_COPY))
+        .child(&create_icon(ICON_COPY, &icon_images, &icon_color))
         .tooltip_text("Copy to clipboard")
         .build();
     let save_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_SAVE))
+        .child(&create_icon(ICON_SAVE, &icon_images, &icon_color))
         .tooltip_text("Save as PNG")
         .build();
     header.pack_end(&copy_button);
@@ -356,13 +387,13 @@ pub fn build_ui(app: &adw::Application) {
 
     let color_dialog = Rc::new(gtk::ColorDialog::new());
     let color_button = gtk::Button::builder()
-        .child(&image_from_svg(ICON_PALETTE))
+        .child(&create_icon(ICON_PALETTE, &icon_images, &icon_color))
         .tooltip_text("Custom color")
         .build();
     color_button.add_css_class("color-custom");
 
-    let make_tool_button = |icon: &[u8], tooltip: &str| {
-        let image = image_from_svg(icon);
+    let make_tool_button = |icon: &'static [u8], tooltip: &str| {
+        let image = create_icon(icon, &icon_images, &icon_color);
         let button = gtk::ToggleButton::builder().child(&image).build();
         button.add_css_class("tool-button");
         button.set_tooltip_text(Some(tooltip));
