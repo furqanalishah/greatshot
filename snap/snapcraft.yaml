@@ -1,0 +1,50 @@
+name: greatshot
+base: core24
+version: 0.1.0
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+summary: Minimal, fast screenshot + annotation tool for Linux.
+description: |
+ Minimal, fast screenshot + annotation tool for Linux.
+grade: stable
+confinement: strict
+
+apps:
+  greatshot:
+    command: usr/bin/greatshot
+    desktop: usr/share/applications/io.github.syed.greatshot.desktop
+    common-id: io.github.syed.greatshot
+    extensions: [gnome]
+    plugs:
+      - home
+      - removable-media
+      - network-status
+
+slots:
+  dbus-greatshot:
+    interface: dbus
+    bus: session
+    name: io.github.syed.greatshot
+
+parts:
+  greatshot-app:
+    plugin: nil
+    source: https://github.com/furqanalishah/greatshot.git
+#    source-tag: $SNAPCRAFT_PROJECT_VERSION
+    build-snaps: [rustup]
+    override-build: |
+      rustup default stable
+      cargo build --release
+      mkdir -p $CRAFT_PART_INSTALL/usr/bin
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/applications
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/
+      mv -f target/release/greatshot $CRAFT_PART_INSTALL/usr/bin/greatshot
+      mv -f data/io.github.syed.greatshot.desktop $CRAFT_PART_INSTALL/usr/share/applications/io.github.syed.greatshot.desktop
+      mv -f data/icons/hicolor/scalable/apps/io.github.syed.greatshot.svg $CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/io.github.syed.greatshot.svg
+      sed -i 's|Icon=io.github.syed.greatshot|Icon=${SNAP}/usr/share/icons/hicolor/scalable/apps/io.github.syed.greatshot.svg|' $CRAFT_PART_INSTALL/usr/share/applications/io.github.syed.greatshot.desktop
+    prime:
+      - usr/bin/greatshot
+      - usr/share/applications/io.github.syed.greatshot.desktop
+      - usr/share/icons/hicolor/scalable/apps/io.github.syed.greatshot.svg
